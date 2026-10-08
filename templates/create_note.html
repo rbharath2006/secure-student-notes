@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}New Note · Secure Notes{% endblock %}
+{% block content %}
+<div class="page-heading compact">
+    <div><span class="eyebrow">KNOWLEDGE BASE</span><h1>Create a new note</h1><p>Capture an idea, concept, command or study reference.</p></div>
+    <a class="btn btn-secondary" href="/dashboard">← Back</a>
+</div>
+<div class="editor-layout">
+    <form method="POST" class="panel form-stack">
+        <div class="field">
+            <label for="title">Note title</label>
+            <input type="text" id="title" name="title" placeholder="e.g. SQL Injection Basics" required>
+        </div>
+        <div class="field">
+            <label for="category">Category</label>
+            <input type="text" id="category" name="category" placeholder="e.g. DBMS, Cybersecurity, Cryptography">
+        </div>
+        <div class="field">
+            <div class="label-row"><label for="content">Note content</label><span>Markdown-style plain text</span></div>
+            <textarea id="content" name="content" rows="14" placeholder="Write your notes here..." required></textarea>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-secondary" href="/dashboard">Cancel</a>
+            <button class="btn btn-primary" type="submit">Save Note <span>✓</span></button>
+        </div>
+    </form>
+    <aside class="tip-panel">
+        <span class="tip-icon">✦</span>
+        <span class="eyebrow">QUICK TIP</span>
+        <h3>Keep your notes structured</h3>
+        <p>Use a clear title and category so your future self can find important material quickly.</p>
+    </aside>
+</div>
+{% endblock %}

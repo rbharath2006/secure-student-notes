@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070b14">
+    <title>{% block title %}Secure Notes{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+
+    <aside class="sidebar" id="sidebar">
+        <a class="brand" href="/dashboard">
+            <span class="brand-mark">✦</span>
+            <span>
+                <strong>SECURE</strong>
+                <small>NOTES</small>
+            </span>
+        </a>
+
+        <div class="sidebar-section">
+            <span class="sidebar-label">WORKSPACE</span>
+            <a class="nav-item {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                <span class="nav-icon">⌂</span><span>Dashboard</span>
+            </a>
+            <a class="nav-item {% if request.path == '/notes/create' %}active{% endif %}" href="/notes/create">
+                <span class="nav-icon">＋</span><span>New Note</span>
+            </a>
+            <a class="nav-item {% if request.path == '/search' %}active{% endif %}" href="/search">
+                <span class="nav-icon">⌕</span><span>Search</span>
+            </a>
+        </div>
+
+        <div class="sidebar-section">
+            <span class="sidebar-label">ACCOUNT</span>
+            <a class="nav-item {% if request.path == '/profile' %}active{% endif %}" href="/profile">
+                <span class="nav-icon">◉</span><span>Profile</span>
+            </a>
+        </div>
+
+        <div class="sidebar-spacer"></div>
+
+        <div class="security-card">
+            <div class="status-dot"></div>
+            <div>
+                <strong>System Online</strong>
+                <span>Workspace operational</span>
+            </div>
+        </div>
+
+        <a class="nav-item logout-link" href="/logout">
+            <span class="nav-icon">↪</span><span>Logout</span>
+        </a>
+    </aside>
+
+    <main class="main-area">
+        <header class="topbar">
+            <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button>
+            <div class="topbar-context">
+                <span class="eyebrow">SECURE WORKSPACE</span>
+                <span class="topbar-title">Student Knowledge Base</span>
+            </div>
+            <div class="user-chip">
+                <span class="avatar">{{ username[:2].upper() if username else 'SN' }}</span>
+                <span class="user-name">{{ username if username else 'Student' }}</span>
+            </div>
+        </header>
+
+        <section class="content-area">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+</div>
+
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

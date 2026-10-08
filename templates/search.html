@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Search · Secure Notes{% endblock %}
+{% block content %}
+<div class="page-heading compact">
+    <div><span class="eyebrow">KNOWLEDGE BASE</span><h1>Search your notes</h1><p>Find technical material across your personal workspace.</p></div>
+</div>
+
+<form class="search-bar" method="GET" action="/search">
+    <span class="search-symbol">⌕</span>
+    <input type="text" id="query" name="q" value="{{ query }}" placeholder="Search by title, category or content...">
+    <button class="btn btn-primary" type="submit">Search</button>
+</form>
+
+{% if query %}
+<div class="section-heading search-results-heading">
+    <div><h2>Results for “{{ query }}”</h2><p>{{ notes|length }} matching note{% if notes|length != 1 %}s{% endif %} found</p></div>
+</div>
+{% endif %}
+
+{% if notes %}
+<div class="note-grid">
+    {% for note in notes %}
+    <article class="note-card">
+        <div class="note-card-top"><span class="category-badge">{{ note["category"] or "General" }}</span><span class="note-index">#{{ note["id"] }}</span></div>
+        <h3>{{ note["title"] }}</h3>
+        <p class="note-preview">{{ note["content"] }}</p>
+        <div class="note-meta"><span>Created {{ note["created_at"] }}</span></div>
+        <div class="note-actions"><a href="/notes/edit/{{ note['id'] }}">Edit</a><a href="/notes/{{ note['id'] }}/comments">Comments</a></div>
+    </article>
+    {% endfor %}
+</div>
+{% elif query %}
+<div class="empty-state">
+    <div class="empty-icon">⌕</div>
+    <h3>No matching notes</h3>
+    <p>Try a different keyword, category or phrase.</p>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">⌕</div>
+    <h3>Search your knowledge base</h3>
+    <p>Enter a keyword above to find your notes.</p>
+</div>
+{% endif %}
+{% endblock %}

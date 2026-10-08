@@ -1,0 +1,32 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign In · Secure Notes{% endblock %}
+{% block auth_content %}
+<div class="auth-brand">
+    <span class="brand-mark large">✦</span>
+    <div><strong>SECURE NOTES</strong><span>STUDENT KNOWLEDGE BASE</span></div>
+</div>
+<div class="auth-card">
+    <span class="eyebrow">WELCOME BACK</span>
+    <h1>Sign in to your workspace</h1>
+    <p class="auth-subtitle">Access your notes and continue where you left off.</p>
+
+    <form method="POST" class="form-stack">
+        <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required>
+        </div>
+        <div class="field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+                <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+                <button type="button" class="password-toggle" data-target="password">Show</button>
+            </div>
+        </div>
+        <button class="btn btn-primary btn-full" type="submit">Sign In <span>→</span></button>
+    </form>
+
+    <div class="auth-divider"><span>NEW TO SECURE NOTES?</span></div>
+    <a class="btn btn-secondary btn-full" href="/register">Create an account</a>
+</div>
+<div class="auth-security"><span>●</span> Local secure workspace · Built for security learning</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Secure Notes{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">OVERVIEW</span>
+        <h1>Good to see you, {{ username }}.</h1>
+        <p>Organize your technical knowledge in one secure workspace.</p>
+    </div>
+    <a class="btn btn-primary" href="/notes/create"><span>＋</span> Create Note</a>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <span class="stat-icon blue">▤</span>
+        <div><span class="stat-label">TOTAL NOTES</span><strong>{{ notes|length }}</strong><small>Your current notes</small></div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-icon cyan">⌁</span>
+        <div><span class="stat-label">WORKSPACE</span><strong>Active</strong><small>Ready for study</small></div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-icon green">✓</span>
+        <div><span class="stat-label">SYSTEM STATUS</span><strong>Online</strong><small>Local environment</small></div>
+    </div>
+</div>
+
+<div class="section-heading">
+    <div>
+        <h2>Your Notes</h2>
+        <p>Recently stored study material</p>
+    </div>
+    <a class="text-link" href="/search">Search all notes →</a>
+</div>
+
+{% if notes %}
+<div class="note-grid">
+    {% for note in notes %}
+    <article class="note-card">
+        <div class="note-card-top">
+            <span class="category-badge">{{ note["category"] or "General" }}</span>
+            <span class="note-index">#{{ note["id"] }}</span>
+        </div>
+        <h3>{{ note["title"] }}</h3>
+        <p class="note-preview">{{ note["content"] }}</p>
+        <div class="note-meta">
+            <span>Created {{ note["created_at"] }}</span>
+        </div>
+        <div class="note-actions">
+            <a href="/notes/edit/{{ note['id'] }}">Edit</a>
+            <a href="/notes/{{ note['id'] }}/comments">Comments</a>
+            <a class="danger-link" href="/notes/delete/{{ note['id'] }}" data-confirm="Delete this note?">Delete</a>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">＋</div>
+    <h3>Your workspace is empty</h3>
+    <p>Create your first note and start building your knowledge base.</p>
+    <a class="btn btn-primary" href="/notes/create">Create your first note</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Comments · Secure Notes{% endblock %}
+{% block content %}
+<div class="page-heading compact">
+    <div><span class="eyebrow">DISCUSSION</span><h1>Note discussion</h1><p>Share thoughts and useful additions with your study material.</p></div>
+    <a class="btn btn-secondary" href="/dashboard">← Back</a>
+</div>
+
+<div class="discussion-layout">
+    <article class="note-focus">
+        <span class="category-badge">NOTE #{{ note["id"] }}</span>
+        <h2>{{ note["title"] }}</h2>
+        <p>{{ note["content"] }}</p>
+    </article>
+
+    <section class="panel">
+        <div class="section-heading">
+            <div><h2>Add a comment</h2><p>Contribute to this note.</p></div>
+        </div>
+        <form method="POST" class="form-stack">
+            <div class="field">
+                <textarea name="content" rows="5" placeholder="Write your comment..." required></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Post Comment <span>→</span></button>
+        </form>
+    </section>
+
+    <section class="comments-section">
+        <div class="section-heading">
+            <div><h2>Existing comments</h2><p>{{ comments|length }} comment{% if comments|length != 1 %}s{% endif %}</p></div>
+        </div>
+        {% if comments %}
+            <div class="comment-list">
+            {% for comment in comments %}
+                <article class="comment-card">
+                    <div class="comment-avatar">{{ comment["username"][:2].upper() }}</div>
+                    <div class="comment-body">
+                        <div class="comment-head"><strong>{{ comment["username"] }}</strong><span>{{ comment["created_at"] }}</span></div>
+                        <p>{{ comment["content"] }}</p>
+                    </div>
+                </article>
+            {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state small"><div class="empty-icon">💬</div><h3>No comments yet</h3><p>Be the first to contribute.</p></div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
