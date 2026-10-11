@@ -340,9 +340,7 @@ def edit_note(note_id):
 
 
 # ============================================================
-# DELETE NOTE
-# NOTE: This remains a GET route in this lab baseline. It should be
-# changed to POST with CSRF protection during the secure V2 phase.
+# DELETE NOTE — POST-only, CSRF-protected, and owner-scoped.
 # ============================================================
 
 
@@ -391,9 +389,10 @@ def comments(note_id):
 
     connection = get_db_connection()
     try:
+        # Private-note policy: only the owner may view or comment on a note.
         note = connection.execute(
-            "SELECT * FROM notes WHERE id = ?",
-            (note_id,),
+            "SELECT * FROM notes WHERE id = ? AND user_id = ?",
+            (note_id, session["user_id"]),
         ).fetchone()
 
         if note is None:

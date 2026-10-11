@@ -381,3 +381,109 @@ def test_user_can_delete_own_note(client):
         connection.close()
 
     assert deleted_note is None
+
+
+
+def test_user_cannot_view_another_users_note_comments(client):
+    import app as app_module
+
+    # Student 1 creates a private note.
+    register(client)
+    login(client)
+    client.post(
+        "/notes/create",
+        data={
+            "title": "Private note",
+            "content": "Student 1 private content",
+            "category": "Personal",
+        },
+    )
+
+    connection = app_module.get_db_connection()
+    try:
+        note = connection.execute(
+            "SELECT id FROM notes WHERE title = ?",
+            ("Private note",),
+        ).fetchone()
+        assert note is not None
+        note_id = note["id"]
+    finally:
+        connection.close()
+
+    # Switch to Student 2.
+    client.post("/logout")
+    register(
+        client,
+        username="student2",
+        email="student2@example.com",
+        password="TestPass123!",
+    )
+    login(client, username="student2")
+
+        # Make the request as Student 2.
+    response = client.get(f"/notes/{note_id}/comments")
+
+    assert response.status_code == 404
+    assert b"Student 1 private content" not in response.data
+
+
+
+def test_user_cannot_comment_on_another_users_note(client):
+    import app as app_module
+
+    # Student 1 creates a private note.
+    register(client)
+    login(client)
+    client.post(
+        "/notes/create",
+        data={
+            "title": "Private note",
+            "content": "Student 1 private content",
+            "category": "Personal",
+        },
+    )
+
+    connection = app_module.get_db_connection()
+    try:
+        note = connection.execute(
+            "SELECT id FROM notes WHERE title = ?",
+            ("Private note",),
+        ).fetchone()
+        assert note is not None
+        note_id = note["id"]
+
+        comments_before = connection.execute(
+            "SELECT COUNT(*) AS total FROM comments WHERE note_id = ?",
+            (note_id,),
+        ).fetchone()["total"]
+    finally:
+        connection.close()
+
+    # Switch to Student 2.
+    client.post("/logout")
+    register(
+        client,
+        username="student2",
+        email="student2@example.com",
+        password="TestPass123!",
+    )
+    login(client, username="student2")
+
+    response = client.post(
+        f"/notes/{note_id}/comments",
+        data={"content": "Unauthorized comment"},
+    )
+
+    assert response.status_code == 404
+
+    # Confirm that no unauthorized comment was saved.
+    connection = app_module.get_db_connection()
+    try:
+        comments_after = connection.execute(
+            "SELECT COUNT(*) AS total FROM comments WHERE note_id = ?",
+            (note_id,),
+        ).fetchone()["total"]
+    finally:
+        connection.close()
+
+    assert comments_after == comments_before
