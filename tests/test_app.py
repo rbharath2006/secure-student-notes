@@ -158,3 +158,37 @@ def test_user_cannot_edit_another_users_note(client):
     response = client.get("/notes/edit/1")
 
     assert response.status_code == 404
+
+
+def test_comment_xss_payload_is_html_escaped(client):
+    register(client)
+    login(client)
+
+    client.post("/notes/create", data={
+        "title": "XSS test note",
+        "content": "Testing safe HTML rendering.",
+        "category": "Security",
+    })
+
+    payload = "<script>alert(1)</script>"
+
+    response = client.post(
+        "/notes/1/comments",
+        data={"content": payload},
+    )
+
+    assert response.status_code == 200
+    assert b"&lt;script&gt;alert(1)&lt;/script&gt;" in response.data
+    assert payload.encode() not in response.data
+
+
+def test_profile_post_accepts_request_without_csrf_token(client):
+    register(client)
+    login(client)
+
+    response = client.post("/profile", data={
+        "email": "updated@example.com",
+    })
+
+    assert response.status_code == 200
+    assert b"updated@example.com" in response.data
