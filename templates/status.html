@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} · Secure Notes{% endblock %}
+{% block content %}
+<div class="page-heading compact">
+    <div>
+        <span class="eyebrow">WORKSPACE STATUS</span>
+        <h1>{{ page_title }}</h1>
+        <p>{{ message }}</p>
+    </div>
+</div>
+
+<section class="panel" style="max-width: 760px;">
+    <div class="empty-icon" aria-hidden="true">✓</div>
+    <h2>{{ page_title }}</h2>
+    <p style="color: var(--muted);">{{ message }}</p>
+    {% if action_url %}
+        <a class="btn btn-primary" href="{{ action_url }}">{{ action_text }}</a>
+    {% endif %}
+    <a class="btn btn-secondary" href="{{ url_for('dashboard') }}" style="margin-left: 8px;">Dashboard</a>
+</section>
+{% endblock %}

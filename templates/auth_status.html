@@ -1,0 +1,18 @@
+{% extends "auth_base.html" %}
+{% block title %}{{ page_title }} · Secure Notes{% endblock %}
+{% block auth_content %}
+<div class="auth-brand">
+    <span class="brand-mark large">✦</span>
+    <div><strong>SECURE NOTES</strong><span>STUDENT KNOWLEDGE BASE</span></div>
+</div>
+<div class="auth-card">
+    <span class="eyebrow">ACCOUNT STATUS</span>
+    <h1>{{ page_title }}</h1>
+    <p class="auth-subtitle">{{ message }}</p>
+    {% if action_url %}
+        <a class="btn btn-primary btn-full" href="{{ action_url }}" style="margin-top: 22px;">{{ action_text }}</a>
+    {% endif %}
+    <a class="btn btn-secondary btn-full" href="{{ url_for('home') }}" style="margin-top: 10px;">Home</a>
+</div>
+<div class="auth-security"><span>●</span> Secure Notes · Student Knowledge Base</div>
+{% endblock %}
