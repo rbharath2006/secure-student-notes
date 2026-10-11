@@ -234,3 +234,61 @@ def test_logout_rejects_get_request(client):
     response = client.get("/logout")
 
     assert response.status_code == 405
+
+
+def test_registration_stores_hashed_password(client):
+    import app as app_module
+    from werkzeug.security import check_password_hash
+
+    register(client)
+
+    connection = app_module.get_db_connection()
+    try:
+        user = connection.execute(
+            "SELECT password FROM users WHERE username = ?",
+            ("student1",),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert user is not None
+    assert user["password"] != "TestPass123!"
+    assert check_password_hash(user["password"], "TestPass123!")
+
+
+def test_legacy_plaintext_password_is_upgraded_on_login(client):
+    import app as app_module
+    from werkzeug.security import check_password_hash
+
+    # Create a user using the existing registration helper.
+    register(client)
+
+    # Simulate an account created before password hashing was introduced.
+    connection = app_module.get_db_connection()
+    try:
+        connection.execute(
+            "UPDATE users SET password = ? WHERE username = ?",
+            ("TestPass123!", "student1"),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    # Log in using the legacy plaintext password.
+    response = login(client)
+
+    assert response.status_code in (200, 302)
+
+    # Confirm the database now stores a valid password hash.
+    connection = app_module.get_db_connection()
+    try:
+        user = connection.execute(
+            "SELECT password FROM users WHERE username = ?",
+            ("student1",),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert user is not None
+    assert user["password"] != "TestPass123!"
+    assert check_password_hash(user["password"], "TestPass123!")

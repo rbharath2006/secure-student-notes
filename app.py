@@ -1,20 +1,30 @@
 import os
-
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_wtf.csrf import CSRFProtect
 from database.db import get_db_connection
 
+
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY",
-    "local-development-key-change-before-deployment",
-)
+secret_key = os.environ.get("SECRET_KEY")
 
+if not secret_key:
+    if os.environ.get("FLASK_ENV") == "production":
+        raise RuntimeError(
+            "SECRET_KEY must be configured in production."
+        )
+    secret_key = "local-development-key-change-before-deployment"
+
+app.config["SECRET_KEY"] = secret_key
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+)
 
 csrf = CSRFProtect(app)
+
 
 def render_status(title, message, action_text="Go to Dashboard", action_endpoint="dashboard",
                   layout="app", status_code=200):
@@ -79,7 +89,7 @@ def register():
                 INSERT INTO users (username, email, password)
                 VALUES (?, ?, ?)
                 """,
-                (username, email, password),
+                (username, email, generate_password_hash(password)),
             )
             connection.commit()
         except Exception:
@@ -115,6 +125,7 @@ def register():
 # LOGIN
 # ============================================================
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -122,22 +133,54 @@ def login():
         password = request.form.get("password", "")
 
         connection = get_db_connection()
+        authenticated_user = None
+
         try:
             user = connection.execute(
                 """
                 SELECT *
                 FROM users
-                WHERE username = ? AND password = ?
+                WHERE username = ?
                 """,
-                (username, password),
+                (username,),
             ).fetchone()
+
+            if user:
+                stored_password = user["password"]
+                password_valid = False
+
+                # First, check passwords stored as secure hashes.
+                try:
+                    password_valid = check_password_hash(
+                        stored_password, password
+                    )
+                except (ValueError, TypeError):
+                    password_valid = False
+
+                # Upgrade a legacy plaintext password after a successful login.
+                if not password_valid and stored_password == password:
+                    password_valid = True
+
+                    upgraded_hash = generate_password_hash(password)
+                    connection.execute(
+                        "UPDATE users SET password = ? WHERE id = ?",
+                        (upgraded_hash, user["id"]),
+                    )
+                    connection.commit()
+
+                if password_valid:
+                    authenticated_user = {
+                        "id": user["id"],
+                        "username": user["username"],
+                    }
+
         finally:
             connection.close()
 
-        if user:
+        if authenticated_user:
             session.clear()
-            session["user_id"] = user["id"]
-            session["username"] = user["username"]
+            session["user_id"] = authenticated_user["id"]
+            session["username"] = authenticated_user["username"]
             return redirect(url_for("dashboard"))
 
         return render_status(
@@ -498,5 +541,4 @@ def search_notes():
 # ============================================================
 
 if __name__ == "__main__":
-    # Debug mode is kept for this local learning branch only.
-    app.run(debug=True)
+    app.run(debug=False)
