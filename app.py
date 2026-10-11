@@ -345,6 +345,7 @@ def edit_note(note_id):
 # changed to POST with CSRF protection during the secure V2 phase.
 # ============================================================
 
+
 @app.route("/notes/delete/<int:note_id>", methods=["POST"])
 def delete_note(note_id):
     if "user_id" not in session:
@@ -352,20 +353,31 @@ def delete_note(note_id):
 
     connection = get_db_connection()
     try:
-        connection.execute(
+        cursor = connection.execute(
             "DELETE FROM notes WHERE id = ? AND user_id = ?",
             (note_id, session["user_id"]),
         )
         connection.commit()
+        deleted = cursor.rowcount > 0
     finally:
         connection.close()
 
+    if not deleted:
+        return render_status(
+            "Note not found",
+            "The note does not exist or does not belong to your account.",
+            "Back to Dashboard",
+            "dashboard",
+            status_code=404,
+        )
+
     return render_status(
-        "Note deletion complete",
-        "The selected note has been deleted if it belonged to your account.",
+        "Note deleted",
+        "Your note has been deleted successfully.",
         "Back to Dashboard",
         "dashboard",
     )
+
 
 
 # ============================================================

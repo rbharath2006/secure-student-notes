@@ -151,7 +151,7 @@ def test_user_cannot_edit_another_users_note(client):
     })
 
     # Sign out and create a second account.
-    client.get("/logout")
+    client.post("/logout")
     register(client, "student2", "student2@example.com")
     login(client, "student2")
 
@@ -292,3 +292,92 @@ def test_legacy_plaintext_password_is_upgraded_on_login(client):
     assert user is not None
     assert user["password"] != "TestPass123!"
     assert check_password_hash(user["password"], "TestPass123!")
+
+
+
+def test_user_cannot_delete_another_users_note(client):
+    import app as app_module
+
+    # Student 1 creates a note.
+    register(client, "student1", "student1@example.com")
+    login(client)
+
+    client.post("/notes/create", data={
+        "title": "Private note",
+        "content": "This note belongs to student1.",
+        "category": "Private",
+    })
+
+    # Get the note ID from the test database.
+    connection = app_module.get_db_connection()
+    try:
+        note = connection.execute(
+            "SELECT id FROM notes WHERE title = ?",
+            ("Private note",),
+        ).fetchone()
+        assert note is not None
+        note_id = note["id"]
+    finally:
+        connection.close()
+
+    # Log out Student 1 and log in Student 2.
+    client.post("/logout")
+    register(client, "student2", "student2@example.com")
+    login(client, "student2")
+
+    # Student 2 attempts to delete Student 1's note.
+    response = client.post(f"/notes/delete/{note_id}")
+
+    assert response.status_code == 404
+
+    # Confirm Student 1's note still exists.
+    connection = app_module.get_db_connection()
+    try:
+        remaining_note = connection.execute(
+            "SELECT id FROM notes WHERE id = ?",
+            (note_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert remaining_note is not None
+
+
+
+def test_user_can_delete_own_note(client):
+    import app as app_module
+
+    register(client)
+    login(client)
+
+    client.post("/notes/create", data={
+        "title": "My note",
+        "content": "This note belongs to me.",
+        "category": "Personal",
+    })
+
+    connection = app_module.get_db_connection()
+    try:
+        note = connection.execute(
+            "SELECT id FROM notes WHERE title = ?",
+            ("My note",),
+        ).fetchone()
+        assert note is not None
+        note_id = note["id"]
+    finally:
+        connection.close()
+
+    response = client.post(f"/notes/delete/{note_id}")
+
+    assert response.status_code == 200
+
+    connection = app_module.get_db_connection()
+    try:
+        deleted_note = connection.execute(
+            "SELECT id FROM notes WHERE id = ?",
+            (note_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert deleted_note is None
