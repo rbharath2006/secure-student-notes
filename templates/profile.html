@@ -22,6 +22,7 @@
 
         <div class="section-heading"><div><h2>Change email</h2><p>Update the email associated with your account.</p></div></div>
         <form method="POST" class="form-stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field">
                 <label for="email">New email address</label>
                 <input type="email" id="email" name="email" placeholder="you@example.com" required>

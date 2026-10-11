@@ -11,6 +11,7 @@
     <p class="auth-subtitle">Build your personal technical knowledge workspace.</p>
 
     <form method="POST" class="form-stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" placeholder="Choose a username" autocomplete="username" required>
