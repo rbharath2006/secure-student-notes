@@ -1,12 +1,20 @@
+import os
+
 from flask import Flask, render_template, request, session, redirect, url_for
+from flask_wtf.csrf import CSRFProtect
 from database.db import get_db_connection
 
 app = Flask(__name__)
 
-# Development-only key. Keep this branch local; move the key to an environment
-# variable and configure secure cookie settings in the secure V2 phase.
-app.secret_key = "student-notes-development-key"
+app.config["SECRET_KEY"] = os.environ.get(
+    "SECRET_KEY",
+    "local-development-key-change-before-deployment",
+)
 
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+csrf = CSRFProtect(app)
 
 def render_status(title, message, action_text="Go to Dashboard", action_endpoint="dashboard",
                   layout="app", status_code=200):
@@ -294,7 +302,7 @@ def edit_note(note_id):
 # changed to POST with CSRF protection during the secure V2 phase.
 # ============================================================
 
-@app.route("/notes/delete/<int:note_id>")
+@app.route("/notes/delete/<int:note_id>", methods=["POST"])
 def delete_note(note_id):
     if "user_id" not in session:
         return login_required_status()
@@ -432,7 +440,7 @@ def profile():
 # LOGOUT
 # ============================================================
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     return render_status(

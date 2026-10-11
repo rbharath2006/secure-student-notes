@@ -54,6 +54,7 @@ def client(tmp_path, monkeypatch):
     app_module.app.config.update(
         TESTING=True,
         SECRET_KEY="test-only-secret-key",
+        WTF_CSRF_ENABLED=False,
     )
 
     with app_module.app.test_client() as test_client:
@@ -192,3 +193,44 @@ def test_profile_post_accepts_request_without_csrf_token(client):
 
     assert response.status_code == 200
     assert b"updated@example.com" in response.data
+
+
+def test_profile_update_rejects_missing_csrf_token(client):
+    import app as app_module
+
+    # Keep CSRF disabled while setting up the test account.
+    register(client)
+    login(client)
+
+    # Enable CSRF validation specifically for the request being tested.
+    app_module.app.config["WTF_CSRF_ENABLED"] = True
+
+    try:
+        response = client.post(
+            "/profile",
+            data={"email": "updated@example.com"},
+        )
+    finally:
+        # Restore the fixture's setting for other tests.
+        app_module.app.config["WTF_CSRF_ENABLED"] = False
+
+    assert response.status_code == 400
+
+
+
+def test_delete_note_rejects_get_request(client):
+    register(client)
+    login(client)
+
+    response = client.get("/notes/delete/1")
+
+    assert response.status_code == 405
+
+
+def test_logout_rejects_get_request(client):
+    register(client)
+    login(client)
+
+    response = client.get("/logout")
+
+    assert response.status_code == 405
