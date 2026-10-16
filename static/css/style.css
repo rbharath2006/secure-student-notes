@@ -891,3 +891,29 @@ h3 { font-size:17px; margin-bottom:8px; }
         flex-direction: column;
     }
 }
+
+
+
+/* Delete note button */
+.delete-btn {
+    background: transparent;
+    color: #ff5364;
+    border: 1px solid #ff5364;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.delete-btn:hover {
+    background: #ff5364;
+    color: #ffffff;
+}
+
+.delete-btn:focus-visible {
+    outline: 2px solid #ff5364;
+    outline-offset: 3px;
+}
