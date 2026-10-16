@@ -45,6 +45,7 @@ def client(tmp_path, monkeypatch):
     def test_connection():
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
     monkeypatch.setattr(
@@ -75,6 +76,21 @@ def login(client, username="student1", password="TestPass123!"):
         "username": username,
         "password": password,
     })
+
+
+
+def post_without_csrf(client, url, data=None):
+    """Test that a POST request without a CSRF token is rejected."""
+    import app as app_module
+
+    previous_value = app_module.app.config.get("WTF_CSRF_ENABLED", False)
+    app_module.app.config["WTF_CSRF_ENABLED"] = True
+
+    try:
+        return client.post(url, data=data or {})
+    finally:
+        app_module.app.config["WTF_CSRF_ENABLED"] = previous_value
+
 
 
 def test_home_page_loads(client):
@@ -734,3 +750,268 @@ def test_login_accepts_valid_csrf_token(client):
 
     finally:
         app_module.app.config["WTF_CSRF_ENABLED"] = False
+
+
+
+def test_profile_rejects_empty_email(client):
+    register(client)
+    login(client)
+
+    response = client.post(
+        "/profile",
+        data={"email": ""},
+    )
+
+    assert response.status_code == 200
+    assert b"Please enter a valid email address." in response.data
+
+
+def test_profile_rejects_invalid_email(client):
+    register(client)
+    login(client)
+
+    response = client.post(
+        "/profile",
+        data={"email": "invalid-email"},
+    )
+
+    assert response.status_code == 200
+    assert b"Please enter a valid email address." in response.data
+
+
+def test_profile_rejects_email_longer_than_254_characters(client):
+    register(client)
+    login(client)
+
+    long_email = "a" * 243 + "@example.com"
+    assert len(long_email) > 254
+
+    response = client.post(
+        "/profile",
+        data={"email": long_email},
+    )
+
+    assert response.status_code == 200
+    assert b"Please enter a valid email address." in response.data
+
+
+def test_profile_accepts_valid_email(client):
+    register(client)
+    login(client)
+
+    response = client.post(
+        "/profile",
+        data={"email": "updated@example.com"},
+    )
+
+    assert response.status_code == 200
+    assert b"updated@example.com" in response.data
+
+
+
+
+def test_registration_rejects_missing_csrf_token(client):
+    response = post_without_csrf(
+        client,
+        "/register",
+        data={
+            "username": "csrfstudent",
+            "email": "csrfstudent@example.com",
+            "password": "TestPass123!",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+
+
+def test_create_note_rejects_missing_csrf_token(client):
+    register(client)
+    login(client)
+
+    response = post_without_csrf(
+        client,
+        "/notes/create",
+        data={
+            "title": "CSRF test note",
+            "content": "This note should not be created.",
+            "category": "Testing",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+
+def test_edit_note_rejects_missing_csrf_token(client):
+    register(client)
+    login(client)
+
+    # Create a note while CSRF is disabled by the test fixture.
+    create_response = client.post(
+        "/notes/create",
+        data={
+            "title": "Original title",
+            "content": "Original content",
+            "category": "Testing",
+        },
+    )
+    assert create_response.status_code == 200
+
+    response = post_without_csrf(
+        client,
+        "/notes/edit/1",
+        data={
+            "title": "Changed title",
+            "content": "Changed content",
+            "category": "Testing",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+
+
+
+def test_comment_rejects_missing_csrf_token(client):
+    register(client)
+    login(client)
+
+    client.post(
+        "/notes/create",
+        data={
+            "title": "Comment test note",
+            "content": "Testing CSRF protection for comments.",
+            "category": "Testing",
+        },
+    )
+
+    response = post_without_csrf(
+        client,
+        "/notes/1/comments",
+        data={"content": "This comment should not be added."},
+    )
+
+    assert response.status_code == 400
+
+
+
+def test_delete_note_rejects_missing_csrf_token(client):
+    register(client)
+    login(client)
+
+    client.post(
+        "/notes/create",
+        data={
+            "title": "Delete test note",
+            "content": "This note must remain unchanged.",
+            "category": "Testing",
+        },
+    )
+
+    response = post_without_csrf(client, "/notes/delete/1")
+
+    assert response.status_code == 400
+
+    import app as app_module
+
+    connection = app_module.get_db_connection()
+    try:
+        note = connection.execute(
+            "SELECT id FROM notes WHERE id = ? AND user_id = ?",
+            (1, 1),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert note is not None
+
+
+def test_logout_rejects_missing_csrf_token(client):
+    register(client)
+    login(client)
+
+    response = post_without_csrf(client, "/logout")
+
+    assert response.status_code == 400
+
+    # The session should remain authenticated after the rejected request.
+    dashboard = client.get("/dashboard")
+    assert dashboard.status_code == 200
+
+
+
+def test_test_database_enforces_foreign_keys(client):
+    import app as app_module
+
+    connection = app_module.get_db_connection()
+    try:
+        enabled = connection.execute(
+            "PRAGMA foreign_keys"
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert enabled == 1
+
+
+def test_cannot_insert_note_for_nonexistent_user(client):
+    import sqlite3
+    import pytest
+    import app as app_module
+
+    connection = app_module.get_db_connection()
+    try:
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                """
+                INSERT INTO notes (user_id, title, content, category)
+                VALUES (?, ?, ?, ?)
+                """,
+                (999999, "Invalid note", "Test content", "Testing"),
+            )
+    finally:
+        connection.close()
+
+
+def test_deleting_note_also_deletes_its_comments(client):
+    register(client)
+    login(client)
+
+    client.post(
+        "/notes/create",
+        data={
+            "title": "Note with comment",
+            "content": "Testing transactional deletion.",
+            "category": "Testing",
+        },
+    )
+
+    client.post(
+        "/notes/1/comments",
+        data={"content": "A comment attached to this note."},
+    )
+
+    response = client.post("/notes/delete/1")
+    assert response.status_code == 200
+
+    import app as app_module
+
+    connection = app_module.get_db_connection()
+    try:
+        note_count = connection.execute(
+            "SELECT COUNT(*) FROM notes WHERE id = ?",
+            (1,),
+        ).fetchone()[0]
+
+        comment_count = connection.execute(
+            "SELECT COUNT(*) FROM comments WHERE note_id = ?",
+            (1,),
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert note_count == 0
+    assert comment_count == 0

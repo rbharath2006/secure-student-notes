@@ -7,12 +7,14 @@ from flask_wtf.csrf import CSRFProtect
 from database.db import get_db_connection
 
 
+
 app = Flask(__name__)
 
+app_env = os.environ.get("APP_ENV", "development").lower()
 secret_key = os.environ.get("SECRET_KEY")
 
 if not secret_key:
-    if os.environ.get("FLASK_ENV") == "production":
+    if app_env == "production":
         raise RuntimeError(
             "SECRET_KEY must be configured in production."
         )
@@ -21,11 +23,29 @@ if not secret_key:
 app.config["SECRET_KEY"] = secret_key
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+# Secure cookies by default in production; local HTTP development
+# can use non-secure cookies.
+secure_cookie_default = "true" if app_env == "production" else "false"
 app.config["SESSION_COOKIE_SECURE"] = (
-    os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+    os.environ.get("COOKIE_SECURE", secure_cookie_default).lower()
+    == "true"
 )
 
 csrf = CSRFProtect(app)
+
+
+
+def validate_email(email):
+    """Validate an email address before saving it."""
+    if len(email) > 254 or not re.fullmatch(
+        r"[^@\s]+@[^@\s]+\.[^@\s]+", email
+    ):
+        return "Please enter a valid email address."
+
+    return None
+
+
 
 
 def validate_registration(username, email, password):
@@ -426,13 +446,43 @@ def delete_note(note_id):
         return login_required_status()
 
     connection = get_db_connection()
+
     try:
-        cursor = connection.execute(
-            "DELETE FROM notes WHERE id = ? AND user_id = ?",
+        connection.execute("BEGIN")
+
+        # Verify ownership before deleting anything.
+        note = connection.execute(
+            "SELECT id FROM notes WHERE id = ? AND user_id = ?",
             (note_id, session["user_id"]),
-        )
-        connection.commit()
-        deleted = cursor.rowcount > 0
+        ).fetchone()
+
+        if note is None:
+            connection.rollback()
+            deleted = False
+        else:
+            # Remove dependent comments first because cascading
+            # deletion is not configured in the current schema.
+            connection.execute(
+                "DELETE FROM comments WHERE note_id = ?",
+                (note_id,),
+            )
+
+            cursor = connection.execute(
+                "DELETE FROM notes WHERE id = ? AND user_id = ?",
+                (note_id, session["user_id"]),
+            )
+
+            deleted = cursor.rowcount > 0
+
+            if deleted:
+                connection.commit()
+            else:
+                connection.rollback()
+
+    except Exception:
+        connection.rollback()
+        raise
+
     finally:
         connection.close()
 
@@ -527,6 +577,7 @@ def comments(note_id):
 
 
 
+
 # ============================================================
 # PROFILE
 # ============================================================
@@ -540,16 +591,19 @@ def profile():
     try:
         if request.method == "POST":
             new_email = request.form.get("email", "").strip()
-            if not new_email:
+            validation_error = validate_email(new_email)
+
+            if validation_error:
                 user = connection.execute(
                     "SELECT * FROM users WHERE id = ?",
                     (session["user_id"],),
                 ).fetchone()
+
                 return render_template(
                     "profile.html",
                     user=user,
                     username=session.get("username"),
-                    error_message="Email address cannot be empty.",
+                    error_message=validation_error,
                 )
 
             connection.execute(

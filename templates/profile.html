@@ -1,8 +1,13 @@
+
 {% extends "base.html" %}
-{% block title %}Profile · Secure Notes{% endblock %}
+{% block title %}Profile - Secure Notes{% endblock %}
 {% block content %}
 <div class="page-heading compact">
-    <div><span class="eyebrow">ACCOUNT</span><h1>Profile & settings</h1><p>Manage your workspace identity and account information.</p></div>
+    <div>
+        <span class="eyebrow">ACCOUNT</span>
+        <h1>Profile & settings</h1>
+        <p>Manage your workspace identity and account information.</p>
+    </div>
 </div>
 
 <div class="profile-grid">
@@ -10,24 +15,60 @@
         <div class="profile-avatar">{{ user["username"][:2].upper() }}</div>
         <h2>{{ user["username"] }}</h2>
         <span class="profile-role">Student workspace</span>
-        <div class="profile-status"><span class="status-dot"></span> Account active</div>
+        <div class="profile-status">
+            <span class="status-dot"></span> Account active
+        </div>
     </section>
 
     <section class="panel">
-        <div class="section-heading"><div><h2>Account information</h2><p>Your current account details.</p></div></div>
-        <div class="info-row"><span>Username</span><strong>{{ user["username"] }}</strong></div>
-        <div class="info-row"><span>Current email</span><strong>{{ user["email"] }}</strong></div>
+        <div class="section-heading">
+            <div>
+                <h2>Account information</h2>
+                <p>Your current account details.</p>
+            </div>
+        </div>
+
+        <div class="info-row">
+            <span>Username</span>
+            <strong>{{ user["username"] }}</strong>
+        </div>
+        <div class="info-row">
+            <span>Current email</span>
+            <strong>{{ user["email"] }}</strong>
+        </div>
 
         <div class="divider"></div>
 
-        <div class="section-heading"><div><h2>Change email</h2><p>Update the email associated with your account.</p></div></div>
+        <div class="section-heading">
+            <div>
+                <h2>Change email</h2>
+                <p>Update the email associated with your account.</p>
+            </div>
+        </div>
+
+        {% if error_message %}
+        <div class="alert alert-error" role="alert">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
         <form method="POST" class="form-stack">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <div class="field">
                 <label for="email">New email address</label>
-                <input type="email" id="email" name="email" placeholder="you@example.com" required>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="you@example.com"
+                    required
+                >
             </div>
-            <button class="btn btn-primary" type="submit">Update Email <span>✓</span></button>
+
+            <button class="btn btn-primary" type="submit">
+                Update Email
+            </button>
         </form>
     </section>
 </div>
