@@ -1,4 +1,6 @@
 import os
+import re
+import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_wtf.csrf import CSRFProtect
@@ -24,6 +26,47 @@ app.config["SESSION_COOKIE_SECURE"] = (
 )
 
 csrf = CSRFProtect(app)
+
+
+def validate_registration(username, email, password):
+    """Validate registration details before saving them."""
+
+    # Username: 3–30 characters, letters, numbers, underscores only
+    if not re.fullmatch(r"[A-Za-z0-9_]{3,30}", username):
+        return (
+            "Username must be 3–30 characters and contain only "
+            "letters, numbers, and underscores."
+        )
+
+    # Email: basic format validation and maximum length
+    if len(email) > 254 or not re.fullmatch(
+        r"[^@\s]+@[^@\s]+\.[^@\s]+", email
+    ):
+        return "Please enter a valid email address."
+
+    # Password: minimum 12 characters, maximum 128 characters
+    if not 12 <= len(password) <= 128:
+        return "Password must be between 12 and 128 characters."
+
+    return None
+
+
+def validate_note(title, content, category):
+    """Validate note fields before saving them."""
+    if not title:
+        return "A note title is required."
+    if len(title) > 150:
+        return "The title must be 150 characters or fewer."
+
+    if not content:
+        return "Note content is required."
+    if len(content) > 10000:
+        return "Note content must be 10,000 characters or fewer."
+
+    if len(category) > 50:
+        return "The category must be 50 characters or fewer."
+
+    return None
 
 
 def render_status(title, message, action_text="Go to Dashboard", action_endpoint="dashboard",
@@ -61,6 +104,7 @@ def home():
     return render_template("index.html")
 
 
+
 # ============================================================
 # REGISTER
 # ============================================================
@@ -72,6 +116,7 @@ def register():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
 
+        # Check for empty fields
         if not username or not email or not password:
             return render_status(
                 "Registration incomplete",
@@ -82,33 +127,53 @@ def register():
                 status_code=400,
             )
 
+        # Validate input before accessing the database
+        validation_error = validate_registration(
+            username, email, password
+        )
+
+        if validation_error:
+            return render_status(
+                "Invalid registration details",
+                validation_error,
+                "Try again",
+                "register",
+                layout="auth",
+                status_code=400,
+            )
+
         connection = get_db_connection()
+
         try:
             connection.execute(
                 """
                 INSERT INTO users (username, email, password)
                 VALUES (?, ?, ?)
                 """,
-                (username, email, generate_password_hash(password)),
+                (
+                    username,
+                    email,
+                    generate_password_hash(password),
+                ),
             )
             connection.commit()
-        except Exception:
-            # Do not expose database details in the browser.
-            connection.close()
+
+        except sqlite3.IntegrityError:
+            # Do not expose database details to the browser.
             return render_status(
                 "Registration could not be completed",
-                "That username or email may already be registered. Please try again with different details.",
+                (
+                    "That username or email may already be registered. "
+                    "Please try again with different details."
+                ),
                 "Try again",
                 "register",
                 layout="auth",
                 status_code=400,
             )
+
         finally:
-            # close() is safe even if the exception branch already closed it.
-            try:
-                connection.close()
-            except Exception:
-                pass
+            connection.close()
 
         return render_status(
             "Registration successful",
@@ -119,6 +184,7 @@ def register():
         )
 
     return render_template("register.html")
+
 
 
 # ============================================================
@@ -225,6 +291,7 @@ def dashboard():
     )
 
 
+
 # ============================================================
 # CREATE NOTE
 # ============================================================
@@ -239,15 +306,19 @@ def create_note():
         content = request.form.get("content", "").strip()
         category = request.form.get("category", "").strip()
 
-        if not title or not content:
+        # Validate note fields
+        validation_error = validate_note(title, content, category)
+
+        if validation_error:
             return render_status(
                 "Note not created",
-                "A title and note content are required.",
+                validation_error,
                 "Try again",
                 "create_note",
                 status_code=400,
             )
 
+        # Save the note securely
         connection = get_db_connection()
         try:
             connection.execute(
@@ -268,7 +339,10 @@ def create_note():
             "dashboard",
         )
 
-    return render_template("create_note.html", username=session.get("username"))
+    return render_template(
+        "create_note.html",
+        username=session.get("username"),
+    )
 
 
 # ============================================================
@@ -305,12 +379,14 @@ def edit_note(note_id):
             category = request.form.get("category", "").strip()
             content = request.form.get("content", "").strip()
 
-            if not title or not content:
+            validation_error = validate_note(title, content, category)
+
+            if validation_error:
                 return render_status(
                     "Note not updated",
-                    "A title and note content are required.",
-                    "Back to Edit Note",
-                    "edit_note",
+                    validation_error,
+                    "Back to Dashboard",
+                    "dashboard",
                     status_code=400,
                 )
 
@@ -382,6 +458,7 @@ def delete_note(note_id):
 # COMMENTS
 # ============================================================
 
+
 @app.route("/notes/<int:note_id>/comments", methods=["GET", "POST"])
 def comments(note_id):
     if "user_id" not in session:
@@ -389,12 +466,13 @@ def comments(note_id):
 
     connection = get_db_connection()
     try:
-        # Private-note policy: only the owner may view or comment on a note.
+        # Only retrieve notes owned by the current user.
         note = connection.execute(
             "SELECT * FROM notes WHERE id = ? AND user_id = ?",
             (note_id, session["user_id"]),
         ).fetchone()
 
+        # Use the same response for nonexistent and unauthorized notes.
         if note is None:
             return render_status(
                 "Note not found",
@@ -406,6 +484,7 @@ def comments(note_id):
 
         if request.method == "POST":
             content = request.form.get("content", "").strip()
+
             if not content:
                 return render_status(
                     "Comment not added",
@@ -424,9 +503,11 @@ def comments(note_id):
             )
             connection.commit()
 
+        # This query runs only after note ownership has been verified.
         comments_rows = connection.execute(
             """
-            SELECT comments.id, comments.content, comments.created_at, users.username
+            SELECT comments.id, comments.content,
+                   comments.created_at, users.username
             FROM comments
             JOIN users ON comments.user_id = users.id
             WHERE comments.note_id = ?
@@ -443,6 +524,7 @@ def comments(note_id):
         comments=comments_rows,
         username=session.get("username"),
     )
+
 
 
 # ============================================================

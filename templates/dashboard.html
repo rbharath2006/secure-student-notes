@@ -49,7 +49,13 @@
         <div class="note-actions">
             <a href="/notes/edit/{{ note['id'] }}">Edit</a>
             <a href="/notes/{{ note['id'] }}/comments">Comments</a>
-            <a class="danger-link" href="/notes/delete/{{ note['id'] }}" data-confirm="Delete this note?">Delete</a>
+            <form method="POST"
+      action="{{ url_for('delete_note', note_id=note['id']) }}"
+      class="inline-form"
+      onsubmit="return confirm('Delete this note?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="danger-link">Delete</button>
+</form>
         </div>
     </article>
     {% endfor %}

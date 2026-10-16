@@ -89,6 +89,58 @@ def test_registration_succeeds(client):
     assert b"Registration successful" in response.data
 
 
+
+def test_registration_rejects_invalid_username(client):
+    response = register(client, username="ab")
+
+    assert response.status_code == 400
+    assert b"Username must be" in response.data
+
+
+def test_registration_rejects_invalid_email(client):
+    response = register(client, email="not-an-email")
+
+    assert response.status_code == 400
+    assert b"valid email address" in response.data
+
+
+def test_registration_rejects_short_password(client):
+    response = register(client, password="Short123!")
+
+    assert response.status_code == 400
+    assert b"12 and 128 characters" in response.data
+
+
+def test_registration_rejects_long_password(client):
+    response = register(client, password="A" * 129)
+
+    assert response.status_code == 400
+    assert b"12 and 128 characters" in response.data
+
+
+def test_invalid_registration_does_not_create_account(client):
+    import app as app_module
+
+    response = register(
+        client,
+        username="student1",
+        email="not-an-email",
+    )
+
+    assert response.status_code == 400
+
+    connection = app_module.get_db_connection()
+    try:
+        user = connection.execute(
+            "SELECT id FROM users WHERE username = ?",
+            ("student1",),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    assert user is None
+
+
 def test_login_and_dashboard(client):
     register(client)
 
@@ -138,6 +190,137 @@ def test_create_and_search_note(client):
 
     assert response.status_code == 200
     assert b"Cybersecurity Revision" in response.data
+
+
+def test_create_note_rejects_empty_title(client):
+    register(client)
+    login(client)
+
+    response = client.post("/notes/create", data={
+        "title": "   ",
+        "content": "Some note content",
+        "category": "Study",
+    })
+
+    assert response.status_code == 400
+    assert b"title is required" in response.data
+
+
+def test_create_note_rejects_empty_content(client):
+    register(client)
+    login(client)
+
+    response = client.post("/notes/create", data={
+        "title": "My note",
+        "content": "   ",
+        "category": "Study",
+    })
+
+    assert response.status_code == 400
+    assert b"content is required" in response.data
+
+
+def test_create_note_rejects_long_title(client):
+    register(client)
+    login(client)
+
+    response = client.post("/notes/create", data={
+        "title": "A" * 151,
+        "content": "Some note content",
+        "category": "Study",
+    })
+
+    assert response.status_code == 400
+    assert b"150 characters or fewer" in response.data
+
+
+def test_create_note_rejects_long_content(client):
+    register(client)
+    login(client)
+
+    response = client.post("/notes/create", data={
+        "title": "My note",
+        "content": "A" * 10001,
+        "category": "Study",
+    })
+
+    assert response.status_code == 400
+    assert b"10,000 characters or fewer" in response.data
+
+
+def test_create_note_rejects_long_category(client):
+    register(client)
+    login(client)
+
+    response = client.post("/notes/create", data={
+        "title": "My note",
+        "content": "Some note content",
+        "category": "A" * 51,
+    })
+
+    assert response.status_code == 400
+    assert b"50 characters or fewer" in response.data
+
+
+def test_edit_note_rejects_long_title(client):
+    register(client)
+    login(client)
+
+    client.post("/notes/create", data={
+        "title": "My note",
+        "content": "Some note content",
+        "category": "Study",
+    })
+
+    response = client.post("/notes/edit/1", data={
+        "title": "A" * 151,
+        "content": "Updated content",
+        "category": "Study",
+    })
+
+    assert response.status_code == 400
+    assert b"150 characters or fewer" in response.data
+
+
+def test_edit_note_rejects_long_content(client):
+    register(client)
+    login(client)
+
+    client.post("/notes/create", data={
+        "title": "My note",
+        "content": "Some note content",
+        "category": "Study",
+    })
+
+    response = client.post("/notes/edit/1", data={
+        "title": "My note",
+        "content": "A" * 10001,
+        "category": "Study",
+    })
+
+    assert response.status_code == 400
+    assert b"10,000 characters or fewer" in response.data
+
+
+def test_edit_note_rejects_long_category(client):
+    register(client)
+    login(client)
+
+    client.post("/notes/create", data={
+        "title": "My note",
+        "content": "Some note content",
+        "category": "Study",
+    })
+
+    response = client.post("/notes/edit/1", data={
+        "title": "My note",
+        "content": "Updated content",
+        "category": "A" * 51,
+    })
+
+    assert response.status_code == 400
+    assert b"50 characters or fewer" in response.data
+
 
 
 def test_user_cannot_edit_another_users_note(client):
@@ -487,3 +670,67 @@ def test_user_cannot_comment_on_another_users_note(client):
         connection.close()
 
     assert comments_after == comments_before
+
+
+def test_login_rejects_missing_csrf_token(client):
+    import app as app_module
+
+    app_module.app.config["WTF_CSRF_ENABLED"] = True
+
+    try:
+        response = client.post(
+            "/login",
+            data={
+                "username": "student1",
+                "password": "TestPass123!",
+            },
+        )
+    finally:
+        app_module.app.config["WTF_CSRF_ENABLED"] = False
+
+    assert response.status_code == 400
+
+
+
+
+
+def test_login_accepts_valid_csrf_token(client):
+    import re
+    import app as app_module
+
+    app_module.app.config["WTF_CSRF_ENABLED"] = True
+
+    try:
+        page = client.get("/login")
+        assert page.status_code == 200
+
+        html = page.get_data(as_text=True)
+
+        match = re.search(
+            r'<input\b(?=[^>]*\bname=["\']csrf_token["\'])'
+            r'(?=[^>]*\bvalue=["\']([^"\']+)["\'])[^>]*>',
+            html,
+            re.IGNORECASE,
+        )
+
+        assert match is not None, (
+            "Login form must contain a CSRF token input with a value"
+        )
+
+        token = match.group(1)
+
+        response = client.post(
+            "/login",
+            data={
+                "username": "nonexistent-user",
+                "password": "WrongPassword123!",
+                "csrf_token": token,
+            },
+        )
+
+        # A valid token should pass CSRF validation.
+        # Invalid credentials should be handled by the login route.
+        assert response.status_code != 400
+
+    finally:
+        app_module.app.config["WTF_CSRF_ENABLED"] = False

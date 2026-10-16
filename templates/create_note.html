@@ -7,6 +7,7 @@
 </div>
 <div class="editor-layout">
     <form method="POST" class="panel form-stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="title">Note title</label>
             <input type="text" id="title" name="title" placeholder="e.g. SQL Injection Basics" required>

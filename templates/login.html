@@ -11,6 +11,7 @@
     <p class="auth-subtitle">Access your notes and continue where you left off.</p>
 
     <form method="POST" class="form-stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required>

@@ -18,6 +18,7 @@
             <div><h2>Add a comment</h2><p>Contribute to this note.</p></div>
         </div>
         <form method="POST" class="form-stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field">
                 <textarea name="content" rows="5" placeholder="Write your comment..." required></textarea>
             </div>

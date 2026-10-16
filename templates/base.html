@@ -49,9 +49,10 @@
             </div>
         </div>
 
-        <a class="nav-item logout-link" href="/logout">
-            <span class="nav-icon">↪</span><span>Logout</span>
-        </a>
+       <form method="POST" action="{{ url_for('logout') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="nav-item logout-link">Logout</button>
+</form>
     </aside>
 
     <main class="main-area">
