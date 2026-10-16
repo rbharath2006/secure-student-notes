@@ -34,7 +34,34 @@ app.config["SESSION_COOKIE_SECURE"] = (
 
 csrf = CSRFProtect(app)
 
-
+@app.after_request
+def add_security_headers(response):
+    """Add baseline HTTP security headers to application responses."""
+    response.headers.setdefault(
+        "X-Content-Type-Options", "nosniff"
+    )
+    response.headers.setdefault(
+        "X-Frame-Options", "DENY"
+    )
+    response.headers.setdefault(
+        "Referrer-Policy", "strict-origin-when-cross-origin"
+    )
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=()",
+    )
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self'",
+    )
+    return response
 
 def validate_email(email):
     """Validate an email address before saving it."""

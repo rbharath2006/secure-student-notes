@@ -26,6 +26,24 @@ A Flask-based web application that allows students to register, log in, create a
 - HTML and CSS
 - pytest
 
+## Database Backups
+
+Create a consistent SQLite database backup with:
+
+```powershell
+python backup_database.py
+
+
+### 2. Review and stage the intended files
+
+```powershell
+git diff -- app.py tests/test_app.py README.md
+git diff --check
+
+git add app.py tests/test_app.py README.md backup_database.py
+git diff --cached --check
+git status --short
+
 ## Prerequisites
 
 - Python 3.12 or a compatible Python version

@@ -1015,3 +1015,36 @@ def test_deleting_note_also_deletes_its_comments(client):
 
     assert note_count == 0
     assert comment_count == 0
+
+
+
+
+def test_security_headers_are_present(client):
+    response = client.get("/login")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert (
+        response.headers["Referrer-Policy"]
+        == "strict-origin-when-cross-origin"
+    )
+    assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+
+
+def test_search_can_match_note_category(client):
+    register(client)
+    login(client)
+
+    client.post(
+        "/notes/create",
+        data={
+            "title": "Category Search Note",
+            "content": "A sample note for search testing.",
+            "category": "Research",
+        },
+    )
+
+    response = client.get("/search?q=Research")
+
+    assert response.status_code == 200
+    assert b"Category Search Note" in response.data
