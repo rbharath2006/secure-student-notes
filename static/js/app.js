@@ -15,9 +15,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     overlay?.addEventListener("click", closeMenu);
 
-    document.querySelectorAll("[data-confirm]").forEach(link => {
-        link.addEventListener("click", event => {
-            if (!window.confirm(link.dataset.confirm)) {
+    document.querySelectorAll("[data-confirm]").forEach(element => {
+        const eventType = element.matches("form") ? "submit" : "click";
+
+        element.addEventListener(eventType, event => {
+            if (!window.confirm(element.dataset.confirm)) {
                 event.preventDefault();
             }
         });

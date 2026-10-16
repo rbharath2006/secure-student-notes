@@ -1,4 +1,5 @@
 
+from pathlib import Path
 import sqlite3
 
 import pytest
@@ -1048,3 +1049,32 @@ def test_search_can_match_note_category(client):
 
     assert response.status_code == 200
     assert b"Category Search Note" in response.data
+
+
+
+
+def test_dashboard_delete_form_has_no_inline_javascript():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "dashboard.html"
+    )
+    content = template.read_text(encoding="utf-8")
+
+    assert 'onsubmit="return confirm(' not in content
+    assert 'class="inline-form delete-form"' in content
+    assert 'data-confirm="Delete this note?"' in content
+
+
+def test_external_javascript_handles_delete_confirmation():
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "static"
+        / "js"
+        / "app.js"
+    )
+    content = script.read_text(encoding="utf-8")
+
+    assert 'document.querySelectorAll("[data-confirm]")' in content
+    assert 'element.matches("form") ? "submit" : "click"' in content
+    assert "event.preventDefault()" in content
