@@ -1,143 +1,108 @@
-# Secure Student Notes Application
-A Flask-based web application that allows students to register, log in, create and manage personal notes, add comments, and search their notes. This project demonstrates secure web application development and practical security testing.
+# Secure Student Notes
+
+A secure student notes web application built using Flask and SQLite. Students can register, log in, and create, organize, search, edit, and delete their personal notes.
+
+## Live Website
+
+**https://rbharath06.pythonanywhere.com**
 
 ## Features
 
 - User registration and login
-- Secure password hashing using Werkzeug
-- Create, edit, view, and delete notes
-- Add comments to notes
-- Search notes
-- User-specific access control
-- Input validation for usernames, email addresses, passwords, and notes
-- CSRF protection for form submissions
-- Parameterized SQL queries to reduce SQL injection risks
-- HTML escaping to help prevent cross-site scripting (XSS)
-- HTTP-only session cookies and configurable secure cookie settings
-- SQLite foreign-key enforcement
-- Automated security and functionality tests
+- Create, edit, search, and delete notes
+- Comments on notes
+- Password hashing
+- CSRF protection
+- Parameterized SQL queries
+- Authentication and note-ownership checks
+- Security headers and secure session cookies
+- SQLite database backup utility
 
-## Technology Stack
+## Technologies Used
 
-- Python
+- Python 3.12
 - Flask
-- Flask-WTF
 - SQLite
-- HTML and CSS
-- pytest
+- HTML, CSS, JavaScript
+- Pytest
+- Git and GitHub
+- PythonAnywhere
 
-## Database Backups
+## Installation and Setup
 
-Create a consistent SQLite database backup with:
-
-```powershell
-python backup_database.py
-
-
-### 2. Review and stage the intended files
-
-```powershell
-git diff -- app.py tests/test_app.py README.md
-git diff --check
-
-git add app.py tests/test_app.py README.md backup_database.py
-git diff --cached --check
-git status --short
-
-## Prerequisites
-
-- Python 3.12 or a compatible Python version
-- Git
-- pip
-
-## Installation
-
-Clone the repository:
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/rbharath2006/secure-student-notes.git
+git clone -b v2-secure https://github.com/rbharath2006/secure-student-notes.git
 cd secure-student-notes
 ```
 
-Create and activate a virtual environment.
+### 2. Create a virtual environment
 
-**Windows PowerShell:**
+**Windows PowerShell**
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
 ```
 
-Install dependencies:
+**Linux/macOS**
 
-```powershell
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
 python -m pip install -r requirements.txt
 ```
 
-## Configuration
+### 4. Initialize the database
 
-For local development, configure the application environment and a development secret key in PowerShell:
-
-```powershell
-$env:APP_ENV = "development"
-$env:SECRET_KEY = python -c "import secrets; print(secrets.token_hex(32))"
-$env:COOKIE_SECURE = "false"
-```
-
-Do not commit secret keys or passwords to GitHub.
-
-## Initialize the Database
-
-If the project database has not been initialized, run the database initialization script:
-
-```powershell
+```bash
 python database/init_db.py
 ```
 
-Back up any database you want to keep before reinitializing it. Check the initialization script before running it against an existing database, as initialization scripts may recreate tables or otherwise affect existing data.
+### 5. Run the application
 
-## Run the Application
-
-```powershell
+```bash
 python app.py
 ```
 
-Open the local address printed in the terminal, typically:
-
-http://127.0.0.1:5000
-
-Use the application locally for development and testing.
+Open the local address displayed in the terminal.
 
 ## Run Tests
 
-Run the complete test suite:
+Execute the automated test suite:
 
-```powershell
-python -m pytest -q
+```bash
+pytest -q
 ```
 
-Check installed dependencies:
+The latest recorded test run completed with **50 passing tests**.
 
-```powershell
-python -m pip check
+## Database Backup
+
+Create a backup of the SQLite database:
+
+```bash
+python backup_database.py
 ```
 
-The security test suite covers areas such as input validation, CSRF protection, access control, SQL injection resistance, XSS escaping, and database integrity.
+Keep database backups private and store them securely.
 
-## Security Notes
+## Security
 
-- Passwords are hashed before storage.
-- SQL queries use parameterized statements.
-- Notes and comments are protected by user ownership checks.
-- State-changing form submissions require CSRF protection.
-- Note deletion handles related comments transactionally.
-- Production deployment requires a strong secret key, HTTPS, secure cookies, and an appropriate production WSGI server.
-- This project is an educational security project; testing does not guarantee that the application is free of vulnerabilities.
+The application includes password hashing, CSRF protection, parameterized SQL queries, authorization checks, security headers, and secure session-cookie settings.
 
-## Project Purpose
+For production deployments, use a strong, unique `SECRET_KEY`, enable production mode, and serve the application over HTTPS. Never commit secrets or production database files to GitHub.
 
-The purpose of this project is to understand secure coding practices, identify common web application vulnerabilities, implement appropriate mitigations, and validate those mitigations through automated testing.
+## Deployment
 
-## License
+The application is deployed on PythonAnywhere:
 
-Add a license if you intend to distribute this project for reuse.
+**https://rbharath06.pythonanywhere.com**
+
+The production database is separate from the local development database.
